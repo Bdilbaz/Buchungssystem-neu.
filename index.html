@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meetingraum Buchung</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #F5F5F5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        header {
+            text-align: center;
+            background-color: #84BD22;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            margin: 0;
+            color: #fff;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+        .date-header {
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* Fünf Spalten für Montag bis Freitag */
+            gap: 15px;
+        }
+        .day-column {
+            display: flex;
+            flex-direction: column;
+        }
+        .day-header {
+            text-align: center;
+            background-color: #299E8E;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .time-block {
+            border: 1px solid #299E8E;
+            border-radius: 5px;
+            padding: 10px;
+            transition: background-color 0.3s;
+            cursor: pointer;
+            background-color: white; /* Setzt die Hintergrundfarbe auf weiß */
+            text-align: center;
+            height: 60px; /* Höhe für 30-Minuten-Slots */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            color: black;
+            margin-bottom: 10px;
+        }
+        .booked-internal {
+            background-color: #86BB22; /* Intern */
+        }
+        .booked-external {
+            background-color: #299E8E; /* Extern */
+        }
+        .modal, .confirm-modal, .cancel-confirm-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content, .confirm-modal-content, .cancel-confirm-modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 600px;
+            height: 400px;
+            text-align: center;
+            position: relative;
+        }
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            cursor: pointer;
+            color: #299E8E;
+        }
+        .btn-group, .modal-footer {
+            display: flex;
+            justify-content: center; /* Zentrale Ausrichtung */
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            background-color: #84BD22;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.2em; /* Größere Schriftgröße */
+            height: 50px; /* Größerer Button */
+            margin: 0 5px;
+            transition: background-color 0.3s, transform 0.3s; /* Modernes Hover-Design */
+        }
+        .btn:hover {
+            background-color: #299E8E;
+            transform: scale(1.05); /* Vergrößert den Button beim Hover */
+        }
+        .close-btn {
+            background-color: #299E8E;
+            margin-top: 20px;
+        }
+        .feedback-popup {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #84BD22;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1000;
+        }
+        .room-details {
+            margin-top: 20px;
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: left;
+        }
+        .room-details p {
+            margin: 0;
+        }
+        .booking-overview {
+            margin-top: 30px;
+        }
+        .booking-overview table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .booking-overview th, .booking-overview td {
+            padding: 10px;
+            border: 1px solid #299E8E;
+            text-align: left;
+        }
+        .booking-overview th {
+            background-color: #299E8E;
+            color: white;
+        }
+        .date-navigation {
+            display: flex;
+            justify-content: center; /* Zentrale Ausrichtung */
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .date-navigation button {
+            background-color: #299E8E;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 0 10px;
+        }
+        .date-navigation button:hover {
+            background-color: #84BD22;
+        }
+        input[type="text"],
+        input[type="number"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+        select {
+            padding: 10px;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Meetingraum 1 - Buchungssystem</h1>
+    </header>
+    <div class="container">
+        <div class="date-navigation">
+            <button id="previousWeek">&lt; Vorherige Woche</button>
+            <div class="date-header" id="currentDate"></div>
+            <select id="roomSelect">
+                <option value="1">Meetingraum 1</option>
+                <option value="2">Meetingraum 2</option>
+                <option value="3">Meetingraum 3</option>
+            </select>
+            <button id="nextWeek">Nächste Woche &gt;</button>
+        </div>
+        <h2>Buchbare Zeiten (Wochenansicht)</h2>
+        <div class="grid" id="timeSlots">
+            <!-- Zeitblöcke werden hier dynamisch hinzugefügt -->
+        </div>
+        <div class="room-details">
+            <p><strong>Maximale Teilnehmerzahl:</strong> 20</p>
+            <p><strong>Technische Ausstattung:</strong> Beamer, Whiteboard, Video-Konferenzsystem</p>
+            <p><strong>Snacks & Getränke:</strong> Verfügbar</p>
+        </div>
+
+        <div class="booking-overview">
+            <h2>Aktuelle Buchungen</h2>
+            <table id="bookingTable">
+                <thead>
+                    <tr>
+                        <th>Slot</th>
+                        <th>Meetingraum</th>
+                        <th>Name</th>
+                        <th>Abteilung</th>
+                        <th>Teilnehmer</th>
+                        <th>Art</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Buchungen werden hier dynamisch hinzugefügt -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal" id="bookingModal">
+        <div class="modal-content">
+            <span class="close" id="closeBookingModal">&times;</span>
+            <h3>Buchungsdetails eingeben</h3>
+            <input type="text" id="nameInput" placeholder="Ihr Name" required>
+            <input type="text" id="departmentInput" placeholder="Ihre Abteilung" required>
+            <input type="number" id="participantsInput" placeholder="Anzahl der Teilnehmer" required>
+            <select id="typeInput">
+                <option value="internal">Intern</option>
+                <option value="external">Extern</option>
+            </select>
+            <div class="modal-footer">
+                <button class="btn" id="confirmBooking">Buchung Bestätigen</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="feedback-popup" id="feedbackPopup">Buchung erfolgreich!</div>
+
+    <script>
+        const currentDateElem = document.getElementById('currentDate');
+        const timeSlotsElem = document.getElementById('timeSlots');
+        const bookingTableElem = document.getElementById('bookingTable').querySelector('tbody');
+        const bookingModal = document.getElementById('bookingModal');
+        const closeBookingModal = document.getElementById('closeBookingModal');
+        const confirmBookingBtn = document.getElementById('confirmBooking');
+        const feedbackPopup = document.getElementById('feedbackPopup');
+        const nextWeekBtn = document.getElementById('nextWeek');
+        const previousWeekBtn = document.getElementById('previousWeek');
+
+        const rooms = [
+            { name: "Meetingraum 1", bookings: [] },
+            { name: "Meetingraum 2", bookings: [] },
+            { name: "Meetingraum 3", bookings: [] },
+        ];
+
+        let currentDate = new Date();
+
+        function updateDateHeader() {
+            const options = { day: '2-digit', weekday: 'long', month: 'long', year: 'numeric' };
+            currentDateElem.innerText = currentDate.toLocaleDateString('de-DE', options);
+        }
+
+        function generateTimeSlots() {
+            timeSlotsElem.innerHTML = '';
+            const weekdays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'];
+            const startHour = 8; // Startzeit
+            const endHour = 18; // Endzeit
+
+            weekdays.forEach((day, index) => {
+                const dayColumn = document.createElement('div');
+                dayColumn.className = 'day-column';
+                
+                const dayHeader = document.createElement('div');
+                const dateString = `${String(currentDate.getDate() + index).padStart(2, '0')} ${day}`; // Datum und Tag
+                dayHeader.className = 'day-header';
+                dayHeader.innerText = dateString;
+                dayColumn.appendChild(dayHeader);
+
+                for (let hour = startHour; hour < endHour; hour += 0.5) { // 30-Minuten-Intervalle
+                    const timeBlock = document.createElement('div');
+                    timeBlock.className = 'time-block';
+                    const startTime = `${hour.toFixed(0)}:00`; // Stunde
+                    const endTime = `${(hour + 0.5).toFixed(0)}:00`; // Nächste halbe Stunde
+                    timeBlock.innerText = `${startTime} - ${endTime}`;
+                    timeBlock.onclick = () => openBookingModal(day, hour);
+                    dayColumn.appendChild(timeBlock);
+                }
+                timeSlotsElem.appendChild(dayColumn);
+            });
+        }
+
+        function openBookingModal(day, hour) {
+            bookingModal.style.display = 'flex';
+            bookingModal.setAttribute('data-day', day);
+            bookingModal.setAttribute('data-hour', hour);
+        }
+
+        closeBookingModal.onclick = () => {
+            bookingModal.style.display = 'none';
+        };
+
+        confirmBookingBtn.onclick = () => {
+            const day = bookingModal.getAttribute('data-day');
+            const hour = bookingModal.getAttribute('data-hour');
+            const name = document.getElementById('nameInput').value;
+            const department = document.getElementById('departmentInput').value;
+            const participants = document.getElementById('participantsInput').value;
+            const type = document.getElementById('typeInput').value;
+
+            const roomIndex = document.getElementById('roomSelect').selectedIndex;
+            const room = rooms[roomIndex];
+
+            const booking = {
+                day,
+                hour,
+                name,
+                department,
+                participants,
+                type,
+            };
+
+            room.bookings.push(booking);
+            updateBookingsTable();
+            highlightBookedSlot(day, hour, type);
+            document.getElementById('nameInput').value = '';
+            document.getElementById('departmentInput').value = '';
+            document.getElementById('participantsInput').value = '';
+            bookingModal.style.display = 'none';
+            showFeedbackPopup();
+        };
+
+        function updateBookingsTable() {
+            bookingTableElem.innerHTML = '';
+            rooms.forEach(room => {
+                room.bookings.forEach(booking => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${booking.hour}:00 - ${Number(booking.hour) + 1}:00</td>
+                        <td>${room.name}</td>
+                        <td>${booking.name}</td>
+                        <td>${booking.department}</td>
+                        <td>${booking.participants}</td>
+                        <td>${booking.type === 'internal' ? 'Intern' : 'Extern'}</td>
+                    `;
+                    bookingTableElem.appendChild(row);
+                });
+            });
+        }
+
+        function highlightBookedSlot(day, hour, type) {
+            const dayIndex = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'].indexOf(day);
+            const slotIndex = (hour - 8) * 2; // Startzeit ist 8 Uhr (0, 0.5, 1, ...)
+            const timeBlock = timeSlotsElem.children[dayIndex].children[slotIndex + 1]; // +1 wegen Header
+            if (type === 'internal') {
+                timeBlock.classList.add('booked-internal');
+            } else {
+                timeBlock.classList.add('booked-external');
+            }
+        }
+
+        function showFeedbackPopup() {
+            feedbackPopup.style.display = 'block';
+            setTimeout(() => {
+                feedbackPopup.style.display = 'none';
+            }, 3000);
+        }
+
+        nextWeekBtn.onclick = () => {
+            currentDate.setDate(currentDate.getDate() + 7);
+            updateDateHeader();
+            generateTimeSlots();
+        };
+
+        previousWeekBtn.onclick = () => {
+            currentDate.setDate(currentDate.getDate() - 7);
+            updateDateHeader();
+            generateTimeSlots();
+        };
+
+        // Initialisierung
+        updateDateHeader();
+        generateTimeSlots();
+    </script>
+</body>
+</html>
